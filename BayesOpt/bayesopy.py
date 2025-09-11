@@ -1,18 +1,27 @@
+"""Small demo illustrating Bayesian optimisation with the :mod:`bayes_opt` package."""
+
 from bayes_opt import BayesianOptimization
 import math
 from bayes_opt import UtilityFunction
 import pandas as pd
 import time
 
-# Let's start by defining our function, bounds, and instantiating an optimization object.
+# Let's start by defining our function, bounds, and instantiating an optimization
+# object.
 def black_box_function(x, y, z):
+    """Toy objective returning the function value and evaluation time.
+
+    The example mirrors the style used throughout the repository: the function
+    value is augmented with the time spent computing it so that optimisation
+    routines can report both quantities.
+    """
     # we want to count the evaluation time of the function
     init_time = time.time()
-    evaluation =  math.exp(-z) * (-x ** 2 - (y - 1) ** 2 + 1) + x + z ** 2
-    # we sleep for 0.1 seconds to simulate a more complex function
+    evaluation = math.exp(-z) * (-x ** 2 - (y - 1) ** 2 + 1) + x + z ** 2
+    # we sleep for a short period to simulate a more complex objective
     time.sleep(0.005)
     # we get the elapsed time
-    elap = (time.time() - init_time) * 1e3 # we convert the time to milliseconds
+    elap = (time.time() - init_time) * 1e3  # convert to milliseconds
     return evaluation, elap
 
 def get_solutions(results, elapsed_time):

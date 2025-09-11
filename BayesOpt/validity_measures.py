@@ -1,3 +1,10 @@
+"""Validity measures used during clustering optimisation.
+
+The module implements two metrics: a *consensus index* based on the adjusted
+mutual information and the Fast Goodman–Kruskal (FGK) index which provides a
+measure of stability for a clustering solution.
+"""
+
 from itertools import product
 import numpy as np
 from sklearn.metrics import adjusted_mutual_info_score

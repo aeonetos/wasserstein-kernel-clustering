@@ -1,3 +1,11 @@
+"""Utilities for validating clustering of power distribution graphs.
+
+The script aggregates helper functions and an executable section that computes
+context-aware validity indices for clusters of electrical grids.  Distances
+between grids are derived from empirical cumulative distribution functions
+(CDFs) and combined with K-medoids clustering.
+"""
+
 import numpy as np
 import pandas as pd
 from multiprocessing import cpu_count, Pool
@@ -10,7 +18,9 @@ from sklearn.metrics import pairwise_distances
 from sklearn_extra.cluster import KMedoids
 import gc
 
+
 def get_grid_properties(folder_path, grid_name):
+    """Read node data for a grid and build basic CDF descriptors."""
     gdf_nodes = gpd.read_file(folder_path + '{}_nodes'.format(grid_name))
     voltage = gdf_nodes['voltage'].values
     demand = gdf_nodes['el_dmd'].values
@@ -18,15 +28,32 @@ def get_grid_properties(folder_path, grid_name):
     cdf_demand = ECDF(demand)
     total_nodes = len(voltage)
     total_demand = sum(demand)
-    return {'cdf_voltage': cdf_voltage, 'cdf_demand': cdf_demand, 'total_nodes': total_nodes, 'total_demand': total_demand, 'grid_id': grid_name}    
+    return {
+        'cdf_voltage': cdf_voltage,
+        'cdf_demand': cdf_demand,
+        'total_nodes': total_nodes,
+        'total_demand': total_demand,
+        'grid_id': grid_name,
+    }
+
 
 def unpack_grid_properties(grid_results):
-    return {grid_results[j]['grid_id']: {k: grid_results[j][k] for k in grid_results[j] if k!='grid_id'} for j in range(len(grid_results))}
+    """Transform a list of grid-property dictionaries into a lookup table."""
+    return {
+        grid_results[j]['grid_id']: {
+            k: grid_results[j][k] for k in grid_results[j] if k != 'grid_id'
+        }
+        for j in range(len(grid_results))
+    }
+
 
 def W1_cdf_based(cdf1, cdf2, x_range):
+    """Approximate the 1-Wasserstein distance between two CDFs on ``x_range``."""
     return np.sum(np.abs(cdf1 - cdf2)) * (x_range[-1] - x_range[0]) / x_range.size
 
+
 def W1_pairwise(cdf_dict, x_range):
+    """Compute all pairwise 1-Wasserstein distances between CDFs in ``cdf_dict``."""
     list_keys = list(cdf_dict.keys())
     W1_df = pd.DataFrame(index=list_keys, columns=list_keys)
     W1_values = np.zeros((len(list_keys), len(list_keys)))
@@ -42,7 +69,7 @@ def W1_pairwise(cdf_dict, x_range):
     # assign the computed distances to the corresponding elements in the matrix
     for p, W1 in zip(pairs_to_compute, W1_distances):
         W1_values[p[0], p[1]] = W1_values[p[1], p[0]] = W1
-        
+
     for i in range(len(list_keys)):
         W1_values[i, i] = 0
     # we store the values in the dataframe
