@@ -1,3 +1,11 @@
 /time_series/data/
 /time_series/__pycache__/
 /Bayes_opt/__pycache__/
+/.vscode/
+/power_distribution_graphs/data/
+/power_distribution_graphs/embeddings/
+/power_distribution_graphs/wasserstein_models/
+/power_distribution_graphs/clustering/
+/power_distribution_graphs/__pycache__/
+/power_distribution_graphs/context_validity/
+BayesOpt/__pycache__/validity_measures.cpython-310.pyc

@@ -1,5 +1,4 @@
 from bayes_opt import BayesianOptimization
-import numpy as np
 import math
 from bayes_opt import UtilityFunction
 import pandas as pd
@@ -85,5 +84,3 @@ if __name__ == '__main__':
     print("--- %s seconds ---" % (time.time() - start_time))
     # we display the top 5 solutions
     print(results.head(5))
-    # save the results as a csv
-    results.to_csv('BayesOpt/bayes_opt_results.csv', index=False)
