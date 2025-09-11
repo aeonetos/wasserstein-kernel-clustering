@@ -1,3 +1,10 @@
+"""Generate node embeddings for power distribution grids.
+
+The embeddings summarise per-node attributes and, optionally, graph-based
+centrality measures.  They are later used to compute Wasserstein distances
+between grids.
+"""
+
 import os
 import sys
 import pandas as pd
@@ -7,7 +14,9 @@ import networkx as nx
 from multiprocessing import cpu_count, Pool
 import time
 
+
 def parallel_grid_embedding(grid_files_path, njobs=20, bunches=20):
+    """Compute embeddings for many grids using multiple processes."""
     # we pick bunches of files in the jobs list. The last bunch may have less files, so we add the rest of the files
     nbunches = len(grid_files_path) // bunches
     jobs = [[grid_files_path[i*bunches:(i+1)*bunches]] for i in range(nbunches)]
@@ -24,7 +33,9 @@ def parallel_grid_embedding(grid_files_path, njobs=20, bunches=20):
     grid_no_power_flow = pd.Series(grid_no_power_flow)
     return node_embeddings, grid_no_power_flow
 
+
 def grids_embeddings(grid_files_path):
+    """Extract per-node features from the provided grid files."""
     node_embeddings = pd.DataFrame()
     grid_no_power_flow = []
     for grid_file_path in grid_files_path:
@@ -64,7 +75,7 @@ def grids_embeddings(grid_files_path):
                     g_graph = nx.Graph([(v, k, {edge_feature: 1/d[edge_feature]}) for u, v, k, d in g.edges(keys=True, data=True)])
                 else:
                     g_graph = nx.Graph([(v, k, {edge_feature: d[edge_feature]}) for u, v, k, d in g.edges(keys=True, data=True)])
-                # we want to get the centrality of the graph g_graph for each edge considering the edge feature 
+                # we want to get the centrality of the graph g_graph for each edge considering the edge feature
                 centrality[edge_feature] = nx.closeness_centrality(g_graph, distance=edge_feature)
             # then, each entry of centrality is a dictionary
             # we can transform it into a pandas dataframe

@@ -1,3 +1,5 @@
+"""Approximate Wasserstein distance computations for graph embeddings."""
+
 import pickle
 from joblib import Parallel, delayed
 from multiprocessing import cpu_count, Pool
@@ -13,7 +15,9 @@ import gc
 import psutil
 import os
 
+
 def unwrap_wasserstein_self(arg, **kwarg):
+    """Helper to unpack arguments when using :func:`Parallel`."""
     return Wasserstein.map_parallel_distance(*arg, **kwarg)
 
 # Class for approximated Wasserstein distance analysis
@@ -48,6 +52,7 @@ class Wasserstein:
         self.pairs_exact_ = None
 
     def compute_W2(self, xs, xt):
+        """Compute the squared 2-Wasserstein distance between two point clouds."""
         M = ot.dist(xs, xt)
         return ot.emd2([], [], M)
     

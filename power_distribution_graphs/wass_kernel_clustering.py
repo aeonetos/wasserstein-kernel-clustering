@@ -1,3 +1,10 @@
+"""Clustering of power distribution graphs with Wasserstein-based kernels.
+
+This script assembles distance matrices derived from node embeddings into
+kernel functions and applies Kernel PCA followed by K-medoids clustering.
+Hyperparameters are optimised through Bayesian optimisation.
+"""
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath('BayesOpt/'))
@@ -20,7 +27,9 @@ from scipy import linalg
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
 
+
 def optimal_dispersion_kernel(distance_vector, test_range = (-4, 2, 25)):
+    """Heuristic search for informative RBF kernel widths."""
     if distance_vector.ndim == 2:
         distance_vector = squareform(distance_vector)
 
@@ -33,7 +42,9 @@ def optimal_dispersion_kernel(distance_vector, test_range = (-4, 2, 25)):
         dispersions[i] = dispersion
     return gammas, dispersions
 
+
 def center_kernel(kernel):
+    """Center a kernel matrix by subtracting row/column means."""
     # We obtain the centered kernel
     centering_vec_kernel = np.mean(kernel, axis=0, keepdims=True)
     centering_mean_kernel = np.mean(kernel)
