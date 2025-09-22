@@ -309,7 +309,7 @@ def optimize_kernels(black_box_fun, opt_obj, util_fun, bayes_init, bayes_iter):
     dict_execution_time = {'init_time': bayes_init_time, 'iter_time': bayes_iter_time}
     return opt_obj, iter_type, CI_index, EC, FGK_index, dict_execution_time
 
-def export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_range, grid_type, eps, grid_iteration=0):
+def export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_range, grid_type, grid_iteration=0):
     """
     This function exports the results of the optimizer in a dataframe
     The input parameters are as follow
@@ -320,7 +320,6 @@ def export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_ran
     :FGK_index: the fast goodman-kruskal index
     :clustering_range: the range of clusters
     :grid_type: the type of grid, either 'LV' or 'MV'
-    :eps: the epsilon value used to define the hyperparameter ranges
     For each combination of gamma values there are clustering_range.size values for
     the number of clusters, the CI index, the FGK index, and the EC. 
     """
@@ -344,7 +343,7 @@ def export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_ran
     df_results.sort_values(by='Target', ascending=False, inplace=True)
     # we save the results to a csv file
     clustering_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'clustering', '{}'.format(grid_type))
-    df_results.to_csv(os.path.join(clustering_path, 'results_{0}_gamma - Copy ({1}).csv'.format(str(eps*2).replace('.','_'), grid_iteration)), index=False)
+    df_results.to_csv(os.path.join(clustering_path, 'results - Copy ({0}).csv'.format(grid_iteration)), index=False)
     return
 
 def obtain_dissimilarity_matrices(_node_embeddings, _dict_names):
@@ -471,9 +470,6 @@ if __name__ == '__main__':
 
     var_gamma = {'gamma_wasserstein': gammas_wasserstein[np.argmax(dispersion_wasserstein)], 'gamma_demand': gammas_demand[np.argmax(dispersion_demand)], 'gamma_nodes': gammas_nodes[np.argmax(dispersion_nodes)]}
 
-
-    copy_number = 0
-
     grid_test = [[i,j] for i in [1.0] for j in [-1.0, 1.0]]
 
     for n, grid_test_i in enumerate(grid_test):
@@ -500,10 +496,10 @@ if __name__ == '__main__':
         ############
         opt_obj, iter_type, CI_index, EC, FGK_index, dict_execution_time = optimize_kernels(black_box, optimizer, utility_function, bayes_init, bayes_iter)
 
-        export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_range, grid_type, eps, n + copy_number)
+        export_results(optimizer, iter_type, CI_index, EC, FGK_index, clustering_range, grid_type, n)
         ############
         end_time = time.time()
         print("Execution time: ", end_time - start_time)
         # we save the execution time dictionary to a pickle file
-        with open(os.path.join(clustering_path, 'execution_time_{0}_gamma - Copy ({1}).pickle'.format(str(eps*2).replace('.','_'), n + copy_number)), 'wb') as handle:
+        with open(os.path.join(clustering_path, 'execution_time - Copy ({0}).pickle'.format(n)), 'wb') as handle:
             pickle.dump(dict_execution_time, handle, protocol=pickle.HIGHEST_PROTOCOL)
