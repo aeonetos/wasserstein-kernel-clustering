@@ -45,8 +45,9 @@ data and running clustering experiments:
   grids using the Lot–mapping approach.
 * `wass_kernel_clustering.py` – builds composite kernels from the distances and
   performs clustering with Bayesian optimisation of hyperparameters.
-* `davies_bouldin_validity.py` – measures context-based validity of the
-  clusters through the Davies–Bouldin index.
+* `davies_bouldin_validity.py` – recomputes Wasserstein-based dissimilarities,
+  clusters the resulting feature maps and assesses the solutions with the
+  Davies–Bouldin index.
 
 Each script can be executed directly and contains inline comments describing
 the required input files and the produced output.
@@ -83,7 +84,12 @@ The datasets must be downloaded from https://doi.org/10.5281/zenodo.15167589
    composed kernels and perform clustering.  Hyperparameters are tuned through
    Bayesian optimisation.
 4. Optionally, evaluate the clustering quality with
-   `power_distribution_graphs/davies_bouldin_validity.py`.
+   `power_distribution_graphs/davies_bouldin_validity.py`.  Setting the
+   `compute_mv_distances`/`compute_lv_distances` flags to `True` recomputes the
+   Wasserstein-1 distance matrices from the raw data and stores them in
+   `power_distribution_graphs/context_validity/`.  Cluster assignments are
+   cached under `power_distribution_graphs/context_validity/clustered_grids/`
+   before generating Davies–Bouldin summaries.
 
 ## Citing
 
