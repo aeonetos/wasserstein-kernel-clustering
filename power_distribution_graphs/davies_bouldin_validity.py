@@ -29,6 +29,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 import time
 from sklearn.metrics import pairwise_distances
 from wass_kernel_clustering import center_kernel, nystrom_map, PCA_map, kernel_PCA, obtain_grid_dissimilarity
+from wasserstein_computations import Wasserstein
 from scipy.spatial.distance import squareform
 from sklearn_extra.cluster import KMedoids
 import math
