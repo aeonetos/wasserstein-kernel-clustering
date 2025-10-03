@@ -28,7 +28,7 @@ import geopandas as gpd
 from statsmodels.distributions.empirical_distribution import ECDF
 import time
 from sklearn.metrics import pairwise_distances
-from wass_kernel_clustering import center_kernel, nystrom_map, PCA_map, kernel_PCA
+from wass_kernel_clustering import center_kernel, nystrom_map, PCA_map, kernel_PCA, obtain_grid_dissimilarity
 from scipy.spatial.distance import squareform
 from sklearn_extra.cluster import KMedoids
 import math
@@ -179,28 +179,8 @@ def get_grid_dissimilarities(grid_type, _embeddings_path, _wass_path):
         dict_names = pickle.load(handle)
 
     node_embeddings = pd.read_csv(os.path.join(_embeddings_path, 'node_embeddings_{}.csv'.format(grid_type)))
-    # Keep only the grids for which we have embeddings and distances.
-    node_embeddings = node_embeddings[node_embeddings['grid'].isin(dict_names.values())]
-
-    # Sort according to the canonical order so that distances align with other
-    # artefacts in the pipeline.
-    order_grid_names = [dict_names[i] for i in range(len(dict_names))]
-
-    # Create a categorical ordering for the 'grid' column based on order_grid_names
-    node_embeddings['grid'] = pd.Categorical(node_embeddings['grid'], categories=order_grid_names, ordered=True)
-
-    # Sort the dataframes based on the new categorical ordering
-    node_embeddings = node_embeddings.sort_values(by='grid')
-
-    # Build auxiliary dissimilarities derived from the node embeddings.
-    penalize_entry = 'demand'
-    weight_penalty = node_embeddings.groupby('grid', observed=True)[penalize_entry].sum().values
-    weight_penalty = weight_penalty.reshape((-1,1))
-    demand_disimilarity_matrix = np.abs(weight_penalty - weight_penalty.T)
-    # The number of nodes is treated analogously.
-    nodes_penalty = node_embeddings.groupby('grid', observed=True).size().values
-    nodes_penalty = nodes_penalty.reshape((-1,1))
-    nodes_disimilarity_matrix = np.abs(nodes_penalty - nodes_penalty.T)
+    # Compute the dissimilarity matrices based on total demand and node counts.
+    demand_disimilarity_matrix, nodes_disimilarity_matrix = obtain_grid_dissimilarity(node_embeddings, dict_names)
 
     # Drop the frame to reduce peak memory usage.
     del node_embeddings
@@ -484,7 +464,7 @@ def read_wass_distances(grid_type):
 
     return distances
 
-def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number):
+def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number, _clustering_path, _clustered_grids_path, _embeddings_path, _wass_path):
     """Cluster grids using the feature maps associated with a copy of the run.
 
     Parameters
@@ -496,6 +476,14 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number):
     _copy_number : str
         Identifier of the optimisation run (e.g. ``"(0)"``) whose parameters
         should be used.
+    _clustering_path : str | os.PathLike
+        Directory containing the clustering results.
+    _clustered_grids_path : str | os.PathLike
+        Directory where the clustering assignments will be stored.
+    _embeddings_path : str | os.PathLike
+        Directory containing the node embeddings and the canonical grid order.
+    _wass_path : str | os.PathLike
+        Directory with the serialized Wasserstein models.
 
     Returns
     -------
@@ -505,16 +493,16 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number):
     # Separate the CSV files corresponding to the requested copy.
     csv_files_results = [file for file in _files_results if file.endswith('.csv') and _copy_number in file]
     # Load the CSV files storing the optimised gamma values.
-    indices_results = {file.split('.')[0]: pd.read_csv(os.path.join(clustering_path, _grid_type, file)) for file in csv_files_results}
+    indices_results = {file.split('.')[0]: pd.read_csv(os.path.join(_clustering_path, _grid_type, file)) for file in csv_files_results}
     # Read the grid names from the embeddings directory to map indices to labels.
-    grid_names = pickle.load(open(os.path.join(embeddings_path, 'normalized_grids_names_{}.pickle'.format(_grid_type)), 'rb'))
+    grid_names = pickle.load(open(os.path.join(_embeddings_path, 'normalized_grids_names_{}.pickle'.format(_grid_type)), 'rb'))
 
     # Identify which optimisation locations are present in the CSV files.
     test_loc = [test for test in range(0,10) if test in indices_results['results - Copy {0}'.format(_copy_number)].index]
 
     dissimilarities_grids = {'wasserstein_dissimilarity': [], 'demand_dissimilarity': [], 'nodes_dissimilarity': []}
 
-    results = get_grid_dissimilarities(_grid_type, embeddings_path, wass_path)
+    results = get_grid_dissimilarities(_grid_type, _embeddings_path, _wass_path)
     dissimilarities_grids['wasserstein_dissimilarity'], dissimilarities_grids['demand_dissimilarity'], dissimilarities_grids['nodes_dissimilarity'] = results
     del results
     gc.collect()
@@ -532,7 +520,7 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number):
         clustered_grids = pd.DataFrame({'grid_id': [grid_names[i] for i in range(len(grid_names))], 'cluster': labels})
         map_medoid = {i: grid_names[medoids[i]] for i in range(len(medoids))}
         clustered_grids['cluster'] = clustered_grids['cluster'].map(map_medoid)
-        clustered_grids.to_csv(os.path.join(clustered_grids_path, 'clustered_grids_{0}_{1} - Copy {2}.csv'.format(_grid_type, str(test),_copy_number)), index=False)
+        clustered_grids.to_csv(os.path.join(_clustered_grids_path, 'clustered_grids_{0}_{1} - Copy {2}.csv'.format(_grid_type, str(test),_copy_number)), index=False)
     return
 
 def clusters_davies_bouldin_relative_index(_grid_type, _cluster_grids, _distances, _K_clusters):
@@ -646,7 +634,7 @@ if __name__ == '__main__':
         if cluster_grids[grid_type] is not None and perform_clustering:
             files_results = os.listdir(os.path.join(clustering_path, grid_type))
             for copy_number in cluster_grids[grid_type]:
-                cluster_grids_feature_maps(grid_type, files_results, copy_number)
+                cluster_grids_feature_maps(grid_type, files_results, copy_number, clustering_path, clustered_grids_path, embeddings_path, wass_path)
 
     K_clusters = 10
     compute_davies_bouldin = True
