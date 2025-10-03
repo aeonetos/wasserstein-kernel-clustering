@@ -156,7 +156,7 @@ def composed_kernel(dissimilarities, gammas, kernel_shift=1e-3, nys_n_samples=50
 
     return phi_wass
 
-def get_grid_dissimilarities(grid_type, _embeddings_path, _wass_path):
+def get_grid_dissimilarities(grid_type, _embeddings_path, _wass_path, _zscores):
     """Load demand, node-count and Wasserstein dissimilarities for a grid type.
 
     Parameters
@@ -167,7 +167,8 @@ def get_grid_dissimilarities(grid_type, _embeddings_path, _wass_path):
         Directory containing the node embeddings and the canonical grid order.
     _wass_path : str | os.PathLike
         Directory with the serialized Wasserstein models.
-
+    _zscores : dict[str, float]
+        Z-scores used to recompute the Wasserstein distances.
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -192,6 +193,7 @@ def get_grid_dissimilarities(grid_type, _embeddings_path, _wass_path):
     with open(os.path.join(_wass_path, 'wass_model_{}.pickle'.format(grid_type)), 'rb') as handle:
         wass_grids = pickle.load(handle)
 
+    wass_grids.recompute_distance_with_zscore(_zscores[grid_type])
     wass_distance = wass_grids.min_distances_.copy()
     # Retrieve the distances from the object and release the heavy structure.
     del wass_grids
@@ -465,7 +467,7 @@ def read_wass_distances(grid_type):
 
     return distances
 
-def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number, _clustering_path, _clustered_grids_path, _embeddings_path, _wass_path):
+def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number, _clustering_path, _clustered_grids_path, _embeddings_path, _wass_path, _zscores):
     """Cluster grids using the feature maps associated with a copy of the run.
 
     Parameters
@@ -485,6 +487,8 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number, _cluste
         Directory containing the node embeddings and the canonical grid order.
     _wass_path : str | os.PathLike
         Directory with the serialized Wasserstein models.
+    _zscores : dict[str, float]
+        Z-scores used to recompute the Wasserstein distances.
 
     Returns
     -------
@@ -503,7 +507,7 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number, _cluste
 
     dissimilarities_grids = {'wasserstein_dissimilarity': [], 'demand_dissimilarity': [], 'nodes_dissimilarity': []}
 
-    results = get_grid_dissimilarities(_grid_type, _embeddings_path, _wass_path)
+    results = get_grid_dissimilarities(_grid_type, _embeddings_path, _wass_path, _zscores)
     dissimilarities_grids['wasserstein_dissimilarity'], dissimilarities_grids['demand_dissimilarity'], dissimilarities_grids['nodes_dissimilarity'] = results
     del results
     gc.collect()
@@ -628,6 +632,8 @@ if __name__ == '__main__':
     else:
         distances_lv = read_wass_distances('LV')
 
+    z_scores = {'MV': -0.5, 'LV': -0.5}
+
     cluster_grids = {'LV': ['(0)'], 'MV': ['(0)']}
     perform_clustering = False
 
@@ -635,7 +641,7 @@ if __name__ == '__main__':
         if cluster_grids[grid_type] is not None and perform_clustering:
             files_results = os.listdir(os.path.join(clustering_path, grid_type))
             for copy_number in cluster_grids[grid_type]:
-                cluster_grids_feature_maps(grid_type, files_results, copy_number, clustering_path, clustered_grids_path, embeddings_path, wass_path)
+                cluster_grids_feature_maps(grid_type, files_results, copy_number, clustering_path, clustered_grids_path, embeddings_path, wass_path, z_scores)
 
     K_clusters = 10
     compute_davies_bouldin = True
