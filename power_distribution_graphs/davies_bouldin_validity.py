@@ -1,7 +1,7 @@
 """Context-aware validity tools for clustering power distribution graphs.
 
 The module gathers helper routines used during the power-distribution graph
-experiments.  In addition to computing Davies–Bouldin indices for different
+experiments.  In addition to computing Davies-Bouldin indices for different
 distance representations, it provides utilities to:
 
 * derive feature maps from Wasserstein-based kernels,
@@ -35,7 +35,7 @@ import math
 import gc
 
 def N_KMedoids(X, clusters, grid_type, n_init=3, n_fgk=100, m_fgk=35):
-    """Run several K-Medoids restarts and keep the best Goodman–Kruskal score.
+    """Run several K-Medoids restarts and keep the best Goodman-Kruskal score.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def N_KMedoids(X, clusters, grid_type, n_init=3, n_fgk=100, m_fgk=35):
         efficient for larger samples.
     n_init : int, default=3
         Number of clustering restarts.  The run with the highest
-        Goodman–Kruskal index is returned.
+        Goodman-Kruskal index is returned.
     n_fgk : int, default=100
         Number of pairs used when estimating the FGK index.
     m_fgk : int, default=35
@@ -321,7 +321,7 @@ def W1_pairwise(cdf_dict, x_range):
     return W1_df
 
 def davies_bouldin_distance_based(in_clusters, pairwise_dist, denominator_eps=1e-10):
-    """Compute the Davies–Bouldin index from arbitrary pairwise distances.
+    """Compute the Davies-Bouldin index from arbitrary pairwise distances.
 
     Parameters
     ----------
@@ -337,7 +337,7 @@ def davies_bouldin_distance_based(in_clusters, pairwise_dist, denominator_eps=1e
     Returns
     -------
     float
-        Davies–Bouldin index computed with the provided distances.
+        Davies-Bouldin index computed with the provided distances.
     """
 
     average_distance_to_medoid = {}
@@ -535,8 +535,8 @@ def cluster_grids_feature_maps(_grid_type, _files_results, _copy_number):
         clustered_grids.to_csv(os.path.join(clustered_grids_path, 'clustered_grids_{0}_{1} - Copy {2}.csv'.format(_grid_type, str(test),_copy_number)), index=False)
     return
 
-def clusters_davies_bouldin_relative_index(_grid_type, _cluster_grids, _distances):
-    """Compare Davies–Bouldin indices across multiple distance representations.
+def clusters_davies_bouldin_relative_index(_grid_type, _cluster_grids, _distances, _K_clusters):
+    """Compare Davies-Bouldin indices across multiple distance representations.
 
     Parameters
     ----------
@@ -548,11 +548,13 @@ def clusters_davies_bouldin_relative_index(_grid_type, _cluster_grids, _distance
     _distances : dict[str, pandas.DataFrame]
         Dictionary of distance matrices as returned by
         :func:`read_wass_distances`.
+    _K_clusters : int
+        Number of clusters used when computing the Davies-Bouldin indices.
 
     Returns
     -------
     None
-        Normalised Davies–Bouldin scores are exported to
+        Normalised Davies-Bouldin scores are exported to
         ``context_validity``.
     """
 
@@ -567,10 +569,10 @@ def clusters_davies_bouldin_relative_index(_grid_type, _cluster_grids, _distance
         # Run K-medoids on the selected distance matrix.
         grids_in_index = _distances[distance_typ].index.tolist()
         distances_values = _distances[distance_typ].values
-        kmedoids = KMedoids(n_clusters=K_clusters, metric='precomputed', method='alternate', random_state=0).fit(distances_values)
+        kmedoids = KMedoids(n_clusters=_K_clusters, metric='precomputed', method='alternate', random_state=0).fit(distances_values)
         labels = kmedoids.labels_
         medoid_indices = kmedoids.medoid_indices_
-        clusters[distance_typ] = {grids_in_index[medoid_indices[k]]: [grids_in_index[i] for i in np.where(labels == k)[0]] for k in range(K_clusters)}
+        clusters[distance_typ] = {grids_in_index[medoid_indices[k]]: [grids_in_index[i] for i in np.where(labels == k)[0]] for k in range(_K_clusters)}
         davies_bouldin_values[distance_typ] = {distance_to_compare: \
                 davies_bouldin_distance_based(clusters[distance_typ], _distances[distance_to_compare]) for distance_to_compare in _distances}
     end_time = time.time()
@@ -651,5 +653,5 @@ if __name__ == '__main__':
 
     # Compute the Davies–Bouldin index for the clustering results if requested.
     if compute_davies_bouldin:
-        clusters_davies_bouldin_relative_index('MV', cluster_grids['MV'], distances_mv)
-        clusters_davies_bouldin_relative_index('LV', cluster_grids['LV'], distances_lv)
+        clusters_davies_bouldin_relative_index('MV', cluster_grids['MV'], distances_mv, K_clusters)
+        clusters_davies_bouldin_relative_index('LV', cluster_grids['LV'], distances_lv, K_clusters)
